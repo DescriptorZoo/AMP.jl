@@ -34,5 +34,10 @@ acsf_ref = [9.89642686254e+00, 6.33890586962e+00,
 acsf_now = vcat(desc[1,:]...)
 println("AMP returns:",acsf_now)
 println("Reference:",acsf_ref)
+println("AMP desc size:",length(acsf_now))
 println(@test acsf_now  ≈  acsf_ref)
+
+desc = amp_acsf(at, Behler2011=false, cuttype="Tanhyper3")
+acsf_now = vcat(desc[1,:]...)
+println("AMP desc size:",length(acsf_now))
 end
