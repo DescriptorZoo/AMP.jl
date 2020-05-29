@@ -431,13 +431,11 @@ export amp_acsf
 function amp_acsf(at; AMPonly=true, Behler2011=true, AMPformat=true, cuttype="Cosine")
     atom_struct = ASEAtoms(at)
     # Calculate descriptor
-    print(atom_struct)
     acsf_desc = py"AMP_ACSF_desc"(atom_struct.po, 
                                   AMPonly=AMPonly, 
                                   Behler2011=Behler2011,
                                   AMPformat=AMPformat,
                                   cut_type=cuttype)
-    print(acsf_desc)
     return acsf_desc
 end
 
