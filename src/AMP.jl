@@ -106,20 +106,23 @@ function __init__()
         Ri = self.atoms[index].position
     
         num_symmetries = len(self.globals.Gs[symbol])
+        neighbornumbers = [atomic_numbers[s] for s in neighborsymbols]
         fingerprint = [None] * num_symmetries
     
         for count in range(num_symmetries):
             G = self.globals.Gs[symbol][count]
     
             if G['type'] == 'G2':
-                ridge = calculate_G2(neighborsymbols, neighborpositions,
-                                     G['element'], G['eta'], G['Rs'], G['Rc_scale'],
-                                     G['Rc'], Ri, self.fortran, G['integral_scale'])
+                ridge = calculate_G2(neighbornumbers, neighborsymbols, 
+                                     neighborpositions,
+                                     G['element'], G['eta'], G['Rs'],
+                                     G['Rc'], Ri, self.fortran)
             elif G['type'] == 'G4':
-                ridge = calculate_G4(neighborsymbols, neighborpositions,
+                ridge = calculate_G4(neighbornumbers, neighborsymbols, 
+                                     neighborpositions,
                                      G['elements'], G['gamma'],
                                      G['zeta'], G['eta'], G['Rc'],
-                                     Ri, self.fortran, G['integral_scale'])
+                                     Ri, self.fortran)
             else:
                 raise NotImplementedError('Unknown G type: %s' % G['type'])
             fingerprint[count] = ridge
@@ -163,7 +166,7 @@ function __init__()
             found = True
         return found, list(set(rv))
     
-    def calc_desc(ase_database, desc, Gs, max_cutoff=None, AMP_only=False):
+    def calc_desc(ase_database, desc, Gs, max_cutoff=None):
         out_desc = []
         found, cutoffs_list = _get_key_values_dict(Gs, find_key='Rc')
         if found:
@@ -199,6 +202,8 @@ function __init__()
                   'eta': float(eta), 
                   'Rs' : float(Rs[ei]), 
                   'Rc_scale': Rc_scale[ei],
+                  'offset' : float(Rs[ei]), 
+                  'cutoff': Rc,
                   'Rc': Rc}
                  if Rs is not None and Rc_scale is not None 
                  else
@@ -207,6 +212,8 @@ function __init__()
                   'eta': float(eta), 
                   'Rs' : float(Rs[ei]), 
                   'Rc_scale': False,
+                  'offset' : float(Rs[ei]), 
+                  'cutoff': Rc,
                   'Rc': Rc}
                  if Rs is not None
                  else
@@ -215,6 +222,8 @@ function __init__()
                   'eta': float(eta), 
                   'Rs' : 0., 
                   'Rc_scale': Rc_scale[ei],
+                  'offset' : 0., 
+                  'cutoff': Rc,
                   'Rc': Rc}
                  if Rc_scale is not None
                  else 
@@ -223,6 +232,8 @@ function __init__()
                   'eta': float(eta), 
                   'Rs' : 0., 
                   'Rc_scale': False,
+                  'offset' : 0., 
+                  'cutoff': Rc,
                   'Rc': Rc}
                  for ei, eta in enumerate(etas)
                  for element in elements]
@@ -240,6 +251,7 @@ function __init__()
                                           'eta': float(eta),
                                           'gamma': float(gamma),
                                           'zeta': int(zeta),
+                                          'cutoff': Rc,
                                           'Rc': Rc})
             return G
         raise NotImplementedError('Unknown type: {}.'.format(gtype))
@@ -408,7 +420,7 @@ function __init__()
         return GG, max_cutoff
     
 
-    def AMP_ACSF_desc(at, AMPonly=True, 
+    def AMP_ACSF_desc(at,
                       Behler2011=False, 
                       AMPformat=False, 
                       cut_type='Tanhyper3'):
@@ -418,7 +430,7 @@ function __init__()
                                                    cuttype=cut_type, AMPformat=AMPformat)
       
         desc = Gaussian(cutoff=max_cutoff, Gs=G, elements=all_syms, fortran=True)
-        fingerprints = calc_desc([at], desc, G, AMP_only=AMPonly)
+        fingerprints = calc_desc([at], desc, G)
         return fingerprints[0]['descriptors']
     """
 end
@@ -428,11 +440,10 @@ end
 
 export amp_acsf
 
-function amp_acsf(at; AMPonly=true, Behler2011=true, AMPformat=true, cuttype="Cosine")
+function amp_acsf(at; Behler2011=true, AMPformat=true, cuttype="Cosine")
     atom_struct = ASEAtoms(at)
     # Calculate descriptor
     acsf_desc = py"AMP_ACSF_desc"(atom_struct.po, 
-                                  AMPonly=AMPonly, 
                                   Behler2011=Behler2011,
                                   AMPformat=AMPformat,
                                   cut_type=cuttype)
